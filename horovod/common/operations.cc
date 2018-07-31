@@ -255,6 +255,7 @@ const Status SHUT_DOWN_ERROR = Status::Aborted(
     "one of the ranks finished execution. If the shutdown was caused by an "
     "exception, you should see the exception in the log before the first "
     "shutdown message.");
+
 #define OP_ERROR(entries, error_message)                                       \
   {                                                                            \
       for (auto& e : (entries)) {                                              \
@@ -590,18 +591,6 @@ DDL_Type GetDDLDataType(const std::shared_ptr<Tensor> tensor) {
     }                                                                          \
   }
 
-#define DDL_CHECK(entries, op_name, op)                                        \
-  {                                                                            \
-    auto ddl_result = (op);                                                    \
-    if (ddl_result != DDL_SUCCESS) {                                           \
-      for (auto& e : (entries)) {                                              \
-        timeline.End(e.tensor_name, nullptr);                                  \
-        e.callback(Status::UnknownError(std::string(op_name) + " failed."));   \
-      }                                                                        \
-      return;                                                                  \
-    }                                                                          \
-  }
-
 #define NCCL_CHECK(entries, op_name, op)                                       \
   {                                                                            \
     auto nccl_result = (op);                                                   \
@@ -610,6 +599,18 @@ DDL_Type GetDDLDataType(const std::shared_ptr<Tensor> tensor) {
         timeline.End(e.tensor_name, nullptr);                                  \
         e.callback(Status::UnknownError(std::string(op_name) + " failed: " +   \
                                         ncclGetErrorString(nccl_result)));     \
+      }                                                                        \
+      return;                                                                  \
+    }                                                                          \
+  }
+
+#define DDL_CHECK(entries, op_name, op)                                        \
+  {                                                                            \
+    auto ddl_result = (op);                                                    \
+    if (ddl_result != DDL_SUCCESS) {                                           \
+      for (auto& e : (entries)) {                                              \
+        timeline.End(e.tensor_name, nullptr);                                  \
+        e.callback(Status::UnknownError(std::string(op_name) + " failed."));   \
       }                                                                        \
       return;                                                                  \
     }                                                                          \
