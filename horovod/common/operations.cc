@@ -215,13 +215,13 @@ struct HorovodGlobalState {
   std::unordered_map<std::vector<int32_t>, ncclComm_t> nccl_comms;
 #endif
 
-// Will be set to true after initialization when ddl is used
-bool ddl_initialized = false;
-int32_t ddl_local_device_id = 0;
+  // Will be set to true after initialization when ddl is used
+  bool ddl_initialized = false;
+  int32_t ddl_local_device_id = 0;
 
 // We reuse CUDA events as it appears that their creation carries non-zero cost.
 // Event management code is only used in NCCL path.
-#if HAVE_NCCLL || HAVE_DDL
+#if HAVE_NCCL || HAVE_DDL
   std::unordered_map<int, std::queue<cudaEvent_t>> cuda_events;
   std::mutex cuda_events_mutex;
 #endif
@@ -250,11 +250,11 @@ const Status NOT_INITIALIZED_ERROR = Status::PreconditionError(
     "Horovod has not been initialized; use hvd.init().");
 
 const Status SHUT_DOWN_ERROR = Status::Aborted(
-        "Horovod has been shut down. This was caused by an exception on one of the "
-        "ranks or an attempt to allreduce, allgather or broadcast a tensor after "
-        "one of the ranks finished execution. If the shutdown was caused by an "
-        "exception, you should see the exception in the log before the first "
-        "shutdown message.");
+    "Horovod has been shut down. This was caused by an exception on one of the "
+    "ranks or an attempt to allreduce, allgather or broadcast a tensor after "
+    "one of the ranks finished execution. If the shutdown was caused by an "
+    "exception, you should see the exception in the log before the first "
+    "shutdown message.");
 #define OP_ERROR(entries, error_message)                                       \
   {                                                                            \
       for (auto& e : (entries)) {                                              \
@@ -553,7 +553,7 @@ ncclDataType_t GetNCCLDataType(const std::shared_ptr<Tensor> tensor) {
 #endif
 
 #if HAVE_DDL
-        DDL_Type GetDDLDataType(const std::shared_ptr<Tensor> tensor) {
+DDL_Type GetDDLDataType(const std::shared_ptr<Tensor> tensor) {
   switch (tensor->dtype()) {
   case HOROVOD_FLOAT32:
     return DDL_TYPE_FLOAT;
@@ -577,18 +577,6 @@ ncclDataType_t GetNCCLDataType(const std::shared_ptr<Tensor> tensor) {
     }                                                                          \
   }
 
-#define DDL_CHECK(entries, op_name, op)                                        \
-  {                                                                            \
-    auto ddl_result = (op);                                                    \
-    if (ddl_result != DDL_SUCCESS) {                                           \
-      for (auto& e : (entries)) {                                              \
-        timeline.End(e.tensor_name, nullptr);                                  \
-        e.callback(Status::UnknownError(std::string(op_name) + " failed."));   \
-      }                                                                        \
-      return;                                                                  \
-    }                                                                          \
-  }
-
 #define CUDA_CHECK(entries, op_name, op)                                       \
   {                                                                            \
     auto cuda_result = (op);                                                   \
@@ -597,6 +585,18 @@ ncclDataType_t GetNCCLDataType(const std::shared_ptr<Tensor> tensor) {
         timeline.End(e.tensor_name, nullptr);                                  \
         e.callback(Status::UnknownError(std::string(op_name) + " failed: " +   \
                                         cudaGetErrorString(cuda_result)));     \
+      }                                                                        \
+      return;                                                                  \
+    }                                                                          \
+  }
+
+#define DDL_CHECK(entries, op_name, op)                                        \
+  {                                                                            \
+    auto ddl_result = (op);                                                    \
+    if (ddl_result != DDL_SUCCESS) {                                           \
+      for (auto& e : (entries)) {                                              \
+        timeline.End(e.tensor_name, nullptr);                                  \
+        e.callback(Status::UnknownError(std::string(op_name) + " failed."));   \
       }                                                                        \
       return;                                                                  \
     }                                                                          \
@@ -1717,17 +1717,17 @@ bool RunLoopOnce(HorovodGlobalState& state, bool is_coordinator) {
 void InitializeHorovodOnce(const int* ranks, int nranks) {
   // Ensure background thread is only started once.
   if (!horovod_global.initialize_flag.test_and_set()) {
-      for (int i = 0; i < nranks; i++) {
-          horovod_global.ranks.push_back(ranks[i]);
-      }
+    for (int i = 0; i < nranks; i++) {
+      horovod_global.ranks.push_back(ranks[i]);
+    }
 
-      horovod_global.background_thread =
-              std::thread(BackgroundThreadLoop, std::ref(horovod_global));
+    horovod_global.background_thread =
+        std::thread(BackgroundThreadLoop, std::ref(horovod_global));
   }
 
   // Wait to ensure that the background thread has finished initializing MPI.
   while (!horovod_global.initialization_done) {
-      std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    std::this_thread::sleep_for(std::chrono::milliseconds(1));
   }
 }
 
