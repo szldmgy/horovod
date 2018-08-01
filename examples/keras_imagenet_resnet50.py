@@ -13,6 +13,7 @@
 #
 from __future__ import print_function
 
+import argparse
 import keras
 from keras import backend as K
 from keras.preprocessing import image
@@ -20,6 +21,18 @@ import tensorflow as tf
 import horovod.keras as hvd
 from horovod.tensorflow.compression import Compression
 import os
+
+parser = argparse.ArgumentParser(description='Keras ImageNet Example',
+                                 formatter_class=argparse.ArgumentDefaultsHelpFormatter)
+parser.add_argument('--train-dir', default=os.path.expanduser('~/imagenet/train'),
+                    help='path to training data')
+parser.add_argument('--val-dir', default=os.path.expanduser('~/imagenet/validation'),
+                    help='path to validation data')
+parser.add_argument('--log-dir', default='./logs',
+                    help='tensorboard log directory')
+parser.add_argument('--checkpoint-format', default='./checkpoint-{epoch}.pth.tar',
+                    help='checkpoint file format')
+args = parser.parse_args()
 
 # Horovod: initialize Horovod.
 hvd.init()
@@ -38,12 +51,12 @@ weight_decay = 0.00005
 epochs = 90
 
 # Paths for training and validation.
-train_dir = os.path.expanduser('~/imagenet/train')
-test_dir = os.path.expanduser('~/imagenet/validation')
+train_dir = args.train_dir
+test_dir = args.val_dir
 
 # Checkpoint format and log directory.
-checkpoint_format = './checkpoint-{epoch}.h5'
-log_dir = './logs'
+checkpoint_format = args.checkpoint_format
+log_dir = args.log_dir
 
 # If set > 0, will resume training from a given checkpoint.
 resume_from_epoch = 0
