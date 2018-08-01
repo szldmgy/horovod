@@ -18,6 +18,7 @@ from keras import backend as K
 from keras.preprocessing import image
 import tensorflow as tf
 import horovod.keras as hvd
+from horovod.tensorflow.compression import Compression
 import os
 
 # Horovod: initialize Horovod.
@@ -99,7 +100,7 @@ else:
     opt = keras.optimizers.SGD(lr=learning_rate * hvd.size(), momentum=0.9)
 
     # Horovod: add Horovod Distributed Optimizer.
-    opt = hvd.DistributedOptimizer(opt)
+    opt = hvd.DistributedOptimizer(opt, compression=Compression.fp16)
 
     model.compile(loss=keras.losses.categorical_crossentropy,
                   optimizer=opt,
